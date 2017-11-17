@@ -11,33 +11,57 @@ const positions = {
 };
 
 /**
- * Determines if the player may move, and updates 'last_move' if they can.
- * @param {Object} state Game state, including hierarchy and players.
- * @param {String} caller Name of the person to calculate strength of.
- * @returns {Boolean} true if the caller can move, otherwise false.
+ * Gets the lowest status a person can have.
+ * @returns {String} Lowest possible status.
  */
-function can_move(state, caller) {
+function lowest_place() {
+	return positions[1];
+}
+
+/**
+ * Determines if the player may move.
+ * @param {Object} state Game state, including hierarchy and players.
+ * @param {String} person Name of the person to determine can move or not.
+ * @returns {Boolean} true if the person can move, otherwise false.
+ */
+function can_move(state, person) {
 	var today = new Date().setHours(0,0,0,0);
-	var last_move = state.players[caller]['last_move'];
-	if (last_move < today) {
-		state.players[caller]['last_move'] = today;
-		return true;
-	}
-	return false;
+	var last_move = state.players[person].last_move;
+	return last_move < today;
+}
+
+/**
+ * Updates the 'last_move' field for a given person.
+ * @param {Object} state Game state, including hierarchy and players.
+ * @param {String} person Name of the person to update most recent move for.
+ */
+function set_most_recent_move(state, person) {
+	var today = new Date().setHours(0,0,0,0);
+	state.players[person].last_move = today;
+}
+
+/**
+ * Determines if the given name is present in the players.
+ * @param {Object} state Game state, including hierarchy and players.
+ * @param {String} person Name of a person to check exists.
+ * @returns {Boolean} true if person is a player, otherwise false.
+ */
+function is_player(state, person) {
+	return person in state.players;
 }
 
 /**
  * Gets the strength of a given person based on their status,
  * plus the statuses of all their supporters.
  * @param {Object} state Game state, including hierarchy and players.
- * @param {String} caller Name of the person to calculate strength of.
+ * @param {String} person Name of the person to calculate strength of.
  * @returns {Number} The strength of the given person plus all their supporters.
  */
-function get_strength(state, caller) {
-	var supporters = get_supporters(state, caller);
-	var strength = state.hierarchy[state.players[caller]['title']]['attack'];
+function get_strength(state, person) {
+	var supporters = get_supporters(state, person);
+	var strength = state.hierarchy[state.players[person].title].attack;
 	for (var supporter in supporters) {
-		strength += state.hierarchy[state.players[supporter]['title']]['attack'];
+		strength += state.hierarchy[state.players[supporter].title].attack;
 	};
 	return strength;
 }
@@ -45,20 +69,20 @@ function get_strength(state, caller) {
 /**
  * Gets all the people supporting a given person.
  * @param {Object} state Game state, including hierarchy and players.
- * @param {String} caller Name of the person to calculate strength of.
- * @returns {Array<String>} Names of supports of the given person.
+ * @param {String} person Name of the person to retrieve supporters of.
+ * @returns {Array<String>} Names of supporters of the given person.
  */
-function get_supporters(state, caller) {
+function get_supporters(state, person) {
 	var supporters = [];
-	for (var person in state.players) {
-		if (state.players[person]['supporting'] === caller) {
-			supporters.push(person);
+	for (var player in state.players) {
+		if (state.players[player].supporting === person) {
+			supporters.push(player);
 		}
 	}
 
 	var child_supporters = [];
-	for (var person in supporters) {
-		child_supporters.push(get_supporters(state, person))
+	for (var player in supporters) {
+		child_supporters.push(get_supporters(state, player))
 	}
 	supporters.push(child_supporters);
 	return supporters;
