@@ -7,7 +7,7 @@ var state = {
 };
 
 exports.run = (api, event) => {
-	// call appropriate method
+	// TODO: call appropriate method
 	output = 'result of method';
 
 	api.sendMessage(output, event.thread_id);
