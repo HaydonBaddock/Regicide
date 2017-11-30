@@ -62,7 +62,7 @@ function is_player(person, players) {
  * plus the statuses of all their supporters.
  * @param {String} person Name of the person to calculate strength of.
  * @param {Object} players Details about the players of the game.
- * @param {Array<Object>} hierarchy Details about the positions that can be held.
+ * @param {OrderedHash} hierarchy Details about the positions that can be held.
  * @returns {Number} The strength of the given person plus all their supporters.
  */
 function get_strength(person, players, hierarchy) {
@@ -95,6 +95,22 @@ function get_supporters(person, players) {
 	supporters.push(child_supporters);
 
 	return supporters;
+}
+
+/**
+ * Gets the name of a class a given number of places from a person.
+ * @param {String} person Name of person to find position relative to.
+ * @param {OrderedHash} hierarchy Details about the positions that can be held.
+ * @param {number} move Number of positions to move (positive moves toward Peasant, negative toward King).
+ * @returns {String} The title of another societal position.
+ */
+function get_relative_class(person, hierarchy, move) {
+	var persons_class = hierarchy.keys().indexOf[person.title];
+	var num_classes = hierarchy.length();
+	var other_class = persons_class + move;
+	if (other_class < 0 || other_class >= num_classes)
+		return null;
+	return hierarchy.keys()[other_class];
 }
 
 /**
@@ -167,21 +183,21 @@ function build_hierarchy(num_players) {
 /**
  * Assigns players positions at random, but taking their current title and who they support into account.
  * @param {Object} players People to assign to positions.
- * @param {Array<Object>} hierarchy Details about the positions that can be held.
+ * @param {OrderedHash} hierarchy Details about the positions that can be held.
  * @param {Array<String>} victors People to prioritise.
  */
 function assign_places(players, hierarchy, victors) {
-	for (var i = 0; i < hierarchy.length; i++) {
+	for (var i = 0; i < hierarchy.length(); i++) {
 		var y = i + 1;
-		while (people_in_position(players, hierarchy[i].title).length < hierarchy[i].spaces) {
-			if (y < hierarchy.length) {
-				var people = people_in_position(players, hierarchy[y].title);
+		while (people_in_position(players, hierarchy.keys()[i].title).length < hierarchy.keys()[i].spaces) {
+			if (y < hierarchy.length()) {
+				var people = people_in_position(players, hierarchy.keys()[y].title);
 				if (people.length > 0) {
 					var prioritised = matching_elemets(people, victors);
 					if (prioritised.length > 0)
-						players[shuffle(prioritised)[0]].title = hierarchy[i];
+						players[shuffle(prioritised)[0]].title = hierarchy.keys()[i];
 					else
-						players[shuffle(people)[0]].title = hierarchy[i];
+						players[shuffle(people)[0]].title = hierarchy.keys()[i];
 				}
 				else {
 					y += 1;
@@ -189,7 +205,7 @@ function assign_places(players, hierarchy, victors) {
 			}
 			else {
 				var people = people_in_position(players, null);
-				players[people[0]].title = hierarchy[i];
+				players[people[0]].title = hierarchy.keys()[i];
 			}
 		}
 	}
@@ -295,9 +311,9 @@ function make_ordered_hash() {
                 vals[k] = v;
             }
         },
-        val: function(k) {return vals[k]},
-        length: function(){return keys.length},
-        keys: function(){return keys},
-        values: function(){return vals}
+        val: function(k) { return vals[k] },
+        length: function() { return keys.length },
+        keys: function() { return keys },
+        values: function() { return vals }
     }
 }

@@ -36,15 +36,15 @@ function end_game() {
 
 function status(target) {
 	if (!state.game_running) return "Game's not running, foo!";
-	if (!is_player(target)) return "That's not a player, foo!";
+	if (!is_player(target, state.players)) return "That's not a player, foo!";
 
 	return state.players[target].title;
 }
 
 function pledge(caller, target) {
 	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(state, caller)) return "You already went, foo!";
-	if (!is_player(target)) return "That's not a player, foo!";
+	if (!can_move(caller, state.players)) return "You already went, foo!";
+	if (!is_player(target, state.players)) return "That's not a player, foo!";
 	set_most_recent_move(state, caller);
 
 	var old_pledge = state.players[caller].supporting;
@@ -55,7 +55,7 @@ function pledge(caller, target) {
 
 function unpledge(caller) {
 	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(state, caller)) return "You already went, foo!";
+	if (!can_move(caller, state.players)) return "You already went, foo!";
 	if (state.players[caller].supporting === null) return "You're not supporting anyone, foo!";
 	set_most_recent_move(state, caller);
 
@@ -66,8 +66,8 @@ function unpledge(caller) {
 
 function attack(caller, target) {
 	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(state, caller)) return "You already went, foo!";
-	if (!is_player(target)) return "That's not a player, foo!";
+	if (!can_move(caller, state.players)) return "You already went, foo!";
+	if (!is_player(target, state.players)) return "That's not a player, foo!";
 	set_most_recent_move(state, caller);
 
 	var caller_attack_strength = get_strength(state, caller) * gaussian(1, 0.1);
@@ -93,11 +93,14 @@ function attack(caller, target) {
 
 function appoint(caller, promotee, demotee) {
 	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(state, caller)) return "You already went, foo!";
-	if (!is_player(promotee)) return "That's not a player, foo!";
-	if (!is_player(demotee)) return "That's not a player, foo!";
-	// check positions of promotee and demotee relative to caller are allowed for this command
+	if (!can_move(caller, state.players)) return "You already went, foo!";
+	if (!is_player(promotee, state.players)) return "That's not a player, foo!";
+	if (!is_player(demotee, state.players)) return "That's not a player, foo!";
+	if (get_relative_class(caller, state.hierarchy, 1) !== state.players[demotee].title) return "You can't demote " + demotee + ", foo!";
+	if (get_relative_class(caller, state.hierarchy, 2) !== state.players[promotee].title) return "You can't promote " + promotee + ", foo!";
 	set_most_recent_move(state, caller);
 
-	// TODO: What happens here again?
+	state.players[promotee].title = get_relative_class(caller, state.hierarchy, 1);
+	state.players[demotee].title = get_relative_class(caller, state.hierarchy, 2);
+	return promotee + " promoted to " + demotee + "'s old position";
 }
