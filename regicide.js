@@ -45,7 +45,7 @@ function pledge(caller, target) {
 	if (!state.game_running) return "Game's not running, foo!";
 	if (!can_move(caller, state.players)) return "You already went, foo!";
 	if (!is_player(target, state.players)) return "That's not a player, foo!";
-	set_most_recent_move(state, caller);
+	set_most_recent_move(caller, state.players);
 
 	var old_pledge = state.players[caller].supporting;
 	state.players[caller].supporting = target;
@@ -57,7 +57,7 @@ function unpledge(caller) {
 	if (!state.game_running) return "Game's not running, foo!";
 	if (!can_move(caller, state.players)) return "You already went, foo!";
 	if (state.players[caller].supporting === null) return "You're not supporting anyone, foo!";
-	set_most_recent_move(state, caller);
+	set_most_recent_move(caller, state.players);
 
 	var old_pledge = state.players[caller].supporting;
 	state.players[caller].supporting = null;
@@ -68,16 +68,18 @@ function attack(caller, target) {
 	if (!state.game_running) return "Game's not running, foo!";
 	if (!can_move(caller, state.players)) return "You already went, foo!";
 	if (!is_player(target, state.players)) return "That's not a player, foo!";
-	set_most_recent_move(state, caller);
+	set_most_recent_move(caller, state.players);
 
 	var caller_attack_strength = get_strength(state, caller) * gaussian(1, 0.1);
 	var target_attack_strength = get_strength(state, target) * gaussian(1, 0.1);
-	var victory = caller_attack_strength > target_attack_strength;
+	var victorious = caller_attack_strength > target_attack_strength;
 
-	if (victory) {
+	if (victorious) {
 		state.players[caller].title = state.players[target].title;
 		[target].push(get_supporters(target, state.players)).forEach(loser => {
 			state.players[loser].title = null;
+			state.players[loser].supporting = null;
+			set_most_recent_move(loser, state.players);
 		});
 		assign_places(state.players, state.hierarchy, get_supporters(caller, state.players));
 		return caller + " overthrew " + target + " and is now a " + state.players[caller].title;		
@@ -85,6 +87,8 @@ function attack(caller, target) {
 	else {
 		[caller].push(get_supporters(caller, state.players)).forEach(loser => {
 			state.players[loser].title = null;
+			state.players[loser].supporting = null;
+			set_most_recent_move(loser, state.players);
 		});
 		assign_places(state.players, state.hierarchy, get_supporters(target, state.players));
 		return caller + " died trying to overthrow " + target + " and all their fellow conspirators have been executed";
@@ -98,7 +102,7 @@ function appoint(caller, promotee, demotee) {
 	if (!is_player(demotee, state.players)) return "That's not a player, foo!";
 	if (get_relative_class(caller, state.hierarchy, 1) !== state.players[demotee].title) return "You can't demote " + demotee + ", foo!";
 	if (get_relative_class(caller, state.hierarchy, 2) !== state.players[promotee].title) return "You can't promote " + promotee + ", foo!";
-	set_most_recent_move(state, caller);
+	set_most_recent_move(caller, state.players);
 
 	state.players[promotee].title = get_relative_class(caller, state.hierarchy, 1);
 	state.players[demotee].title = get_relative_class(caller, state.hierarchy, 2);

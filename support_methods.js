@@ -9,7 +9,7 @@ const positions = [
 	},
 	{
 		name: 'Lord',
-		order: 2
+		order: 3
 	},
 	{
 		name: 'Bishop',
@@ -17,7 +17,7 @@ const positions = [
 	},
 	{
 		name: 'Knight',
-		order: 3
+		order: 2
 	},
 	{
 		name: 'Peasant',
@@ -62,7 +62,7 @@ function is_player(person, players) {
  * plus the statuses of all their supporters.
  * @param {String} person Name of the person to calculate strength of.
  * @param {Object} players Details about the players of the game.
- * @param {OrderedHash} hierarchy Details about the positions that can be held.
+ * @param {Object} hierarchy Details about the positions that can be held.
  * @returns {Number} The strength of the given person plus all their supporters.
  */
 function get_strength(person, players, hierarchy) {
@@ -100,8 +100,8 @@ function get_supporters(person, players) {
 /**
  * Gets the name of a class a given number of places from a person.
  * @param {String} person Name of person to find position relative to.
- * @param {OrderedHash} hierarchy Details about the positions that can be held.
- * @param {number} move Number of positions to move (positive moves toward Peasant, negative toward King).
+ * @param {Object} hierarchy Details about the positions that can be held.
+ * @param {Number} move Number of positions to move (positive moves toward Peasant, negative toward King).
  * @returns {String} The title of another societal position.
  */
 function get_relative_class(person, hierarchy, move) {
@@ -119,14 +119,13 @@ function get_relative_class(person, hierarchy, move) {
  * @returns {Object} Details about all the game's players.
  */
 function create_players(people) {
-	people = shuffle(people);
+	shuffle(people);
 	var players = {};
 	people.forEach(person => {
 		players[person] = {
 			title: null,
 			supporting: null,
-			last_move: new Date(0),
-			score: 0
+			last_move: new Date(0)
 		}
 	});
 }
@@ -183,7 +182,7 @@ function build_hierarchy(num_players) {
 /**
  * Assigns players positions at random, but taking their current title and who they support into account.
  * @param {Object} players People to assign to positions.
- * @param {OrderedHash} hierarchy Details about the positions that can be held.
+ * @param {Object} hierarchy Details about the positions that can be held.
  * @param {Array<String>} victors People to prioritise.
  */
 function assign_places(players, hierarchy, victors) {
@@ -243,10 +242,9 @@ function matching_elemets(arr1, arr2) {
 }
 
 /**
- * Creates a shuffled version of a given array.
+ * Shuffles a given array.
  * Uses the Fisher-Yates (aka Knuth) Shuffle.
  * @param {Array} array Array to be suffled.
- * @returns {Array} Shuffled array.
  */
 function shuffle(array) {
 	var currentIndex = array.length, temporaryValue, randomIndex;
@@ -257,7 +255,6 @@ function shuffle(array) {
 		array[currentIndex] = array[randomIndex];
 		array[randomIndex] = temporaryValue;
 	}
-	return array;
 }
 
 /**
@@ -295,7 +292,7 @@ function gaussian(mean, stdev) {
 
 /**
  * Creates an object similar to Javascript Objects except keys hold their order.
- * @returns {OrderedHash} A new empty Ordered Hash.
+ * @returns {Object} A new empty Ordered Hash.
  */
 function make_ordered_hash() {
 	var keys = [];
