@@ -67,9 +67,9 @@ function is_player(person, players) {
  */
 function get_strength(person, players, hierarchy) {
 	var supporters = get_supporters(person, players);
-	var strength = hierarchy.val([players[person].title]).attack;
+	var strength = hierarchy.value([players[person].title]).attack;
 	supporters.forEach(supporter => {
-		strength += hierarchy.val([players[supporter].title]).attack;
+		strength += hierarchy.value([players[supporter].title]).attack;
 	});
 	return strength;
 }
@@ -99,18 +99,18 @@ function get_supporters(person, players) {
 
 /**
  * Gets the name of a class a given number of places from a person.
- * @param {String} person Name of person to find position relative to.
+ * @param {String} title title to find position relative to.
  * @param {Object} hierarchy Details about the positions that can be held.
  * @param {Number} move Number of positions to move (positive moves toward Peasant, negative toward King).
  * @returns {String} The title of another societal position.
  */
-function get_relative_class(person, hierarchy, move) {
-	var persons_class = hierarchy.keys().indexOf[person.title];
+function get_relative_class(title, hierarchy, move) {
+	var indexOfPersonsClass = hierarchy.indexOf(title);
 	var num_classes = hierarchy.length();
-	var other_class = persons_class + move;
-	if (other_class < 0 || other_class >= num_classes)
+	var indexOfOtherClass = indexOfPersonsClass + move;
+	if (indexOfOtherClass < 0 || indexOfOtherClass >= num_classes)
 		return null;
-	return hierarchy.keys()[other_class];
+	return hierarchy.keyAt(indexOfOtherClass);
 }
 
 /**
@@ -128,6 +128,7 @@ function create_players(people) {
 			last_move: new Date(0)
 		}
 	});
+	return players;
 }
 
 /**
@@ -136,18 +137,17 @@ function create_players(people) {
  * @returns {Array<Object>} Custom hierarchy for this number of people.
  */
 function build_hierarchy(num_players) {
-	var i, rungs, rung, useable_positions, position, placements, hierarchy, title;
 
 	// Determines the number of positions in the hierarchy (2 would mean Kings and Peasants only)
-	i = num_players;
-	rungs = 0;
+	var i = num_players;
+	var rungs = 0;
 	while (i > 0) {
 		rungs += 1;
 		i -= rungs;
 	}
 
 	// builds an array of titles that will be used
-	useable_positions = [];
+	var useable_positions = [];
 	positions.forEach(position => {
 		if (position.order < rungs) {
 			useable_positions.push(position.name);
@@ -155,8 +155,8 @@ function build_hierarchy(num_players) {
 	});
 
 	// Determines the number of people at each position
-	placements = new Array(rungs).fill(0);
-	rung = 0;
+	var placements = new Array(rungs).fill(0);
+	var rung = 0;
 	for (i = 0; i < num_players; i++) {
 		placements[rung] += 1;
 		rung += 1;
@@ -168,9 +168,9 @@ function build_hierarchy(num_players) {
 	placements.reverse();
 
 	// Builds the hierarchy object
-	hierarchy = make_ordered_hash();
+	var hierarchy = new OrderedHash();
 	for (i = 0; i < useable_positions.length; i++) {
-		title = useable_positions[i];
+		var title = useable_positions[i];
 		hierarchy.push(useable_positions[i], {
 			attack: placements.length - i,
 			spaces: placements[i]
@@ -181,30 +181,32 @@ function build_hierarchy(num_players) {
 
 /**
  * Assigns players positions at random, but taking their current title and who they support into account.
+ * This is used to maintain a pyramid structure for the hierarchy.
  * @param {Object} players People to assign to positions.
  * @param {Object} hierarchy Details about the positions that can be held.
  * @param {Array<String>} victors People to prioritise.
  */
 function assign_places(players, hierarchy, victors) {
+	shuffle(victors);
 	for (var i = 0; i < hierarchy.length(); i++) {
 		var y = i + 1;
-		while (people_in_position(players, hierarchy.keys()[i].title).length < hierarchy.keys()[i].spaces) {
+		while (people_in_position(players, hierarchy.keyAt(i)).length < hierarchy.valueAt(i).spaces) {
 			if (y < hierarchy.length()) {
-				var people = people_in_position(players, hierarchy.keys()[y].title);
+				var people = shuffle(people_in_position(players, hierarchy.keyAt(y)));
 				if (people.length > 0) {
 					var prioritised = matching_elemets(people, victors);
 					if (prioritised.length > 0)
-						players[shuffle(prioritised)[0]].title = hierarchy.keys()[i];
+						players[prioritised[0]].title = hierarchy.keyAt(i);
 					else
-						players[shuffle(people)[0]].title = hierarchy.keys()[i];
+						players[people[0]].title = hierarchy.keyAt(i);
 				}
 				else {
 					y += 1;
 				}
 			}
 			else {
-				var people = people_in_position(players, null);
-				players[people[0]].title = hierarchy.keys()[i];
+				var people = shuffle(people_in_position(players, null));
+				players[people[0]].title = hierarchy.keyAt(i);
 			}
 		}
 	}
@@ -233,18 +235,20 @@ function people_in_position(players, title) {
  * @returns {Array} Common elements of the two arrays.
  */
 function matching_elemets(arr1, arr2) {
-	var ret = [];
+	var matches = [];
 	for (var i in arr1) {
 		if (arr2.indexOf(arr1[i]) > -1) {
-			ret.push(arr1[i]);
+			matches.push(arr1[i]);
 		}
 	}
+	return matches;
 }
 
 /**
- * Shuffles a given array.
+ * Shuffles a given array, in-place, but returns the shuffled product too.
  * Uses the Fisher-Yates (aka Knuth) Shuffle.
  * @param {Array} array Array to be suffled.
+ * @returns {Array} The same array, shuffled.
  */
 function shuffle(array) {
 	var currentIndex = array.length, temporaryValue, randomIndex;
@@ -255,6 +259,7 @@ function shuffle(array) {
 		array[currentIndex] = array[randomIndex];
 		array[randomIndex] = temporaryValue;
 	}
+	return array;
 }
 
 /**
@@ -291,26 +296,47 @@ function gaussian(mean, stdev) {
 }
 
 /**
- * Creates an object similar to Javascript Objects except keys hold their order.
- * @returns {Object} A new empty Ordered Hash.
+ * An object similar to regular JSON objects except it maintains the order of added properties.
  */
-function make_ordered_hash() {
-	var keys = [];
-    var vals = {};
-    return {
-        push: function(k,v) {
-            if (!vals[k]) keys.push(k);
-            vals[k] = v;
-        },
-        insert: function(pos,k,v) {
-            if (!vals[k]) {
-                keys.splice(pos,0,k);
-                vals[k] = v;
-            }
-        },
-        val: function(k) { return vals[k] },
-        length: function() { return keys.length },
-        keys: function() { return keys },
-        values: function() { return vals }
-    }
+class OrderedHash {
+	constructor() {
+		this.keys = [];
+		this.vals = {};
+	}
+	
+	push(k, v) {
+		if (!this.vals[k]) this.keys.push(k);
+		this.vals[k] = v;
+	}
+
+	insert(pos, k, v) {
+		if (!this.vals[k]) {
+			this.keys.splice(pos,0,k);
+			this.vals[k] = v;
+		}
+	}
+
+	value(k) { return this.vals[k] }
+	length() { return this.keys.length }
+	keys_() { return this.keys }
+	values() { return this.vals }
+	keyAt(i) { return this.keys[i] }
+	valueAt(i) { return this.vals[this.keys[i]] }
+	indexOf(k) { return this.keys.indexOf(k) }
+}
+
+module.exports = {
+	can_move: can_move,
+	set_most_recent_move: set_most_recent_move,
+	is_player: is_player,
+	get_strength: get_strength,
+	get_supporters: get_supporters,
+	get_relative_class: get_relative_class,
+	create_players: create_players,
+	build_hierarchy: build_hierarchy,
+	assign_places: assign_places,
+	gaussian: gaussian,
+
+	// TODO: not used in regicde.js, remove from exports
+	people_in_position: people_in_position
 }

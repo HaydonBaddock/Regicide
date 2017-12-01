@@ -1,4 +1,16 @@
-import "support_methods";
+
+// TODO: There's got to be a better way to do this...
+var helpers = require("./support_methods");
+var can_move = helpers.can_move;
+var set_most_recent_move = helpers.set_most_recent_move;
+var is_player = helpers.is_player;
+var get_strength = helpers.get_strength;
+var get_supporters = helpers.get_supporters;
+var get_relative_class = helpers.get_relative_class;
+var create_players = helpers.create_players;
+var build_hierarchy = helpers.build_hierarchy;
+var assign_places = helpers.assign_places;
+var gaussian = helpers.gaussian;
 
 var state = {
 	game_running: false,
@@ -100,11 +112,11 @@ function appoint(caller, promotee, demotee) {
 	if (!can_move(caller, state.players)) return "You already went, foo!";
 	if (!is_player(promotee, state.players)) return "That's not a player, foo!";
 	if (!is_player(demotee, state.players)) return "That's not a player, foo!";
-	if (get_relative_class(caller, state.hierarchy, 1) !== state.players[demotee].title) return "You can't demote " + demotee + ", foo!";
-	if (get_relative_class(caller, state.hierarchy, 2) !== state.players[promotee].title) return "You can't promote " + promotee + ", foo!";
+	if (get_relative_class(state.players[caller].title, state.hierarchy, 1) !== state.players[demotee].title) return "You can't demote " + demotee + ", foo!";
+	if (get_relative_class(state.players[caller].title, state.hierarchy, 2) !== state.players[promotee].title) return "You can't promote " + promotee + ", foo!";
 	set_most_recent_move(caller, state.players);
 
-	state.players[promotee].title = get_relative_class(caller, state.hierarchy, 1);
-	state.players[demotee].title = get_relative_class(caller, state.hierarchy, 2);
+	state.players[promotee].title = get_relative_class(state.players[caller].title, state.hierarchy, 1);
+	state.players[demotee].title = get_relative_class(state.players[caller].title, state.hierarchy, 2);
 	return promotee + " promoted to " + demotee + "'s old position";
 }
