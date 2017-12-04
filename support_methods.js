@@ -122,13 +122,20 @@ function create_players(people) {
 	shuffle(people);
 	var players = {};
 	people.forEach(person => {
-		players[person] = {
-			title: null,
-			supporting: null,
-			last_move: new Date(0)
-		}
+		players[person] = create_player();
 	});
 	return players;
+}
+
+/**
+ * Creates a blank person object.
+ */
+function create_player() {
+	return {
+		title: null,
+		supporting: null,
+		last_move: new Date(0)
+	};
 }
 
 /**
@@ -186,7 +193,7 @@ function build_hierarchy(num_players) {
  * @param {Object} hierarchy Details about the positions that can be held.
  * @param {Array<String>} victors People to prioritise.
  */
-function assign_places(players, hierarchy, victors) {
+function assign_places(players, hierarchy, victors=[]) {
 	shuffle(victors);
 	for (var i = 0; i < hierarchy.length(); i++) {
 		var y = i + 1;
@@ -226,6 +233,19 @@ function people_in_position(players, title) {
 		}
 	}
 	return people;
+}
+
+/**
+ * Generates a string to represent the current state of the game.
+ * @param {Object} state The state of the game including players and hierarchy.
+ */
+function state_tostring(state) {
+	var str = "";
+	hierarchy.keys().forEach(title => {
+		var people = people_in_position(state.players, title);
+		str += title + Array(11 - title.length).join(" ") + people.join(", ") + "\n";
+	});
+	return str;
 }
 
 /**
@@ -332,11 +352,10 @@ module.exports = {
 	get_strength: get_strength,
 	get_supporters: get_supporters,
 	get_relative_class: get_relative_class,
+	create_player: create_player,
 	create_players: create_players,
 	build_hierarchy: build_hierarchy,
 	assign_places: assign_places,
-	gaussian: gaussian,
-
-	// TODO: not used in regicde.js, remove from exports
-	people_in_position: people_in_position
+	state_tostring: state_tostring,
+	gaussian: gaussian
 }
