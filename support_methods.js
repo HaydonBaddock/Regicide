@@ -27,24 +27,24 @@ const positions = [
 
 /**
  * Determines if the player may move.
- * @param {String} person Name of the person to determine can move or not.
+ * @param {String} personId ID of the person to determine can move or not.
  * @param {Object} players Details about the players of the game.
  * @returns {Boolean} true if the person can move, otherwise false.
  */
-function can_move(person, players) {
+function can_move(personId, players) {
 	var today = new Date().setHours(0,0,0,0);
-	var last_move = players[person].last_move;
-	return last_move < today;
+	var lastMove = players[personId].lastMove;
+	return lastMove < today;
 }
 
 /**
  * Updates the 'last_move' field for a given person.
- * @param {String} person Name of the person to update most recent move for.
+ * @param {String} personId ID of the person to update most recent move for.
  * @param {Object} players Details about the players of the game.
  */
-function set_most_recent_move(person, players) {
+function set_most_recent_move(personId, players) {
 	var today = new Date().setHours(0,0,0,0);
-	players[person].last_move = today;
+	players[personId].last_move = today;
 }
 
 /**
@@ -91,11 +91,11 @@ function get_supporters(personId, players, actual, pretty) {
 			supporters.push(player);
 	}
 
-	var child_supporters = [];
+	var childSupporters = [];
 	for (var player in supporters) {
-		child_supporters.push(get_supporters(player, players, actual, false))
+		childSupporters.push(get_supporters(player, players, actual, false))
 	}
-	supporters.push(child_supporters);
+	supporters.push(childSupporters);
 
 	if (pretty) swap_ids_for_names(players, supporters)
 	return supporters;
@@ -110,9 +110,9 @@ function get_supporters(personId, players, actual, pretty) {
  */
 function get_relative_class(title, hierarchy, move) {
 	var indexOfPersonsClass = hierarchy.indexOf(title);
-	var num_classes = hierarchy.length();
+	var numClasses = hierarchy.length();
 	var indexOfOtherClass = indexOfPersonsClass + move;
-	if (indexOfOtherClass < 0 || indexOfOtherClass >= num_classes)
+	if (indexOfOtherClass < 0 || indexOfOtherClass >= numClasses)
 		return null;
 	return hierarchy.keyAt(indexOfOtherClass);
 }
@@ -147,13 +147,13 @@ function create_player(personName) {
 
 /**
  * Builds the game's heirarchy (tiers and number of positions within those tiers). 
- * @param {Number} num_players The number of players in the game.
+ * @param {Number} numPlayers The number of players in the game.
  * @returns {Array<Object>} Custom hierarchy for this number of people.
  */
-function build_hierarchy(num_players) {
+function build_hierarchy(numPlayers) {
 
 	// Determines the number of positions in the hierarchy (2 would mean Kings and Peasants only)
-	var i = num_players;
+	var i = numPlayers;
 	var rungs = 0;
 	while (i > 0) {
 		rungs += 1;
@@ -161,17 +161,17 @@ function build_hierarchy(num_players) {
 	}
 
 	// builds an array of titles that will be used
-	var useable_positions = [];
+	var useablePositions = [];
 	positions.forEach(position => {
 		if (position.order < rungs) {
-			useable_positions.push(position.name);
+			useablePositions.push(position.name);
 		}
 	});
 
 	// Determines the number of people at each position
 	var placements = new Array(rungs).fill(0);
 	var rung = 0;
-	for (i = 0; i < num_players; i++) {
+	for (i = 0; i < numPlayers; i++) {
 		placements[rung] += 1;
 		rung += 1;
 		if (rung === rungs) {
@@ -183,9 +183,9 @@ function build_hierarchy(num_players) {
 
 	// Builds the hierarchy object
 	var hierarchy = new OrderedHash();
-	for (i = 0; i < useable_positions.length; i++) {
-		var title = useable_positions[i];
-		hierarchy.push(useable_positions[i], {
+	for (i = 0; i < useablePositions.length; i++) {
+		var title = useablePositions[i];
+		hierarchy.push(useablePositions[i], {
 			attack: placements.length - i,
 			spaces: placements[i]
 		});
@@ -314,7 +314,7 @@ function gaussian(mean, stdev) {
 	var y2;
 	var use_last = false;
 	var y1;
-	if(use_last) {
+	if (use_last) {
 		y1 = y2;
 		use_last = false;
 	}
@@ -324,7 +324,7 @@ function gaussian(mean, stdev) {
 			x1 = 2.0 * Math.random() - 1.0;
 			x2 = 2.0 * Math.random() - 1.0;
 			w  = x1 * x1 + x2 * x2;               
-		} while( w >= 1.0);
+		} while (w >= 1.0);
 		w = Math.sqrt((-2.0 * Math.log(w))/w);
 		y1 = x1 * w;
 		y2 = x2 * w;
@@ -332,13 +332,12 @@ function gaussian(mean, stdev) {
 	}
 
 	var retval = mean + stdev * y1;
-	if(retval > 0) 
-		return retval;
-	return -retval;
+	return retval > 0 ? retval : -retval;
 }
 
 /**
- * An object similar to regular JSON objects except it maintains the order of added properties.
+ * An object similar to regular JSON objects except it maintains the order of added properties,
+ * if you use the proper methods.
  */
 class OrderedHash {
 	constructor() {
