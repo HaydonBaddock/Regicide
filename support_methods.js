@@ -49,25 +49,26 @@ function set_most_recent_move(person, players) {
 
 /**
  * Determines if the given name is present in the players.
- * @param {String} person Name of a person to check exists.
+ * @param {String} personId Name of a person to check exists.
  * @param {Object} players Details about the players of the game.
  * @returns {Boolean} true if person is a player, otherwise false.
  */
-function is_player(person, players) {
+function is_player(personId, players) {
 	return person in players;
 }
 
 /**
  * Gets the strength of a given person based on their status,
  * plus the statuses of all their supporters.
- * @param {String} person Name of the person to calculate strength of.
+ * @param {String} personId ID of the person to calculate strength of.
  * @param {Object} players Details about the players of the game.
  * @param {Object} hierarchy Details about the positions that can be held.
+ * @param {Boolean} actual Whether to get actual strength or purported strength.
  * @returns {Number} The strength of the given person plus all their supporters.
  */
-function get_strength(person, players, hierarchy) {
-	var supporters = get_supporters(person, players);
-	var strength = hierarchy.value([players[person].title]).attack;
+function get_strength(personId, players, hierarchy, actual) {
+	var supporters = get_supporters(personId, players, actual, false);
+	var strength = hierarchy.value([players[personId].title]).attack;
 	supporters.forEach(supporter => {
 		strength += hierarchy.value([players[supporter].title]).attack;
 	});
@@ -76,24 +77,27 @@ function get_strength(person, players, hierarchy) {
 
 /**
  * Gets all the people supporting a given person.
- * @param {String} person Name of the person to retrieve supporters of.
+ * @param {String} personId ID of the person to retrieve supporters of.
  * @param {Object} players Details about the players of the game.
+ * @param {Boolean} actual Whether to use actual supporters or claimed supporters.
+ * @param {Boolean} pretty True if you want names, false for unique IDs.
  * @returns {Array<String>} Names of supporters of the given person.
  */
-function get_supporters(person, players) {
+function get_supporters(personId, players, actual, pretty) {
 	var supporters = [];
 	for (var player in players) {
-		if (players[player].supporting === person) {
+		if ((actual && players[player].actual_supportee === personId)
+		|| (!actual && players[player].claimed_supportee === personId))
 			supporters.push(player);
-		}
 	}
 
 	var child_supporters = [];
 	for (var player in supporters) {
-		child_supporters.push(get_supporters(state, player))
+		child_supporters.push(get_supporters(player, players, actual, false))
 	}
 	supporters.push(child_supporters);
 
+	if (pretty) swap_ids_for_names(players, supporters)
 	return supporters;
 }
 
@@ -115,14 +119,15 @@ function get_relative_class(title, hierarchy, move) {
 
 /**
  * Creates an object to represent all players of the game with default values for all their stats.
- * @param {Array<String>} people Names of people playing the game.
+ * @param {Object} people Names of people playing the game.
  * @returns {Object} Details about all the game's players.
  */
 function create_players(people) {
-	shuffle(people);
+	var uniqueIds = Object.keys(people);
+	shuffle(uniqueIds);
 	var players = {};
-	people.forEach(person => {
-		players[person] = create_player();
+	uniqueIds.forEach(id => {
+		players[id] = create_player(people[id].name);
 	});
 	return players;
 }
@@ -130,10 +135,12 @@ function create_players(people) {
 /**
  * Creates a blank person object.
  */
-function create_player() {
+function create_player(personName) {
 	return {
+		name: personName,
 		title: null,
-		supporting: null,
+		actual_supportee: null,
+		claimed_supportee: null,
 		last_move: new Date(0)
 	};
 }
@@ -223,29 +230,44 @@ function assign_places(players, hierarchy, victors=[]) {
  * Gets all the people with the given position.
  * @param {Object} players Details about the players of the game.
  * @param {String} title Class to find members of.
- * @returns {Array<String>} Names of all people in that class.
+ * @param {Boolean} pretty True if you want names, false for unique IDs.
+ * @returns {Array<String>} Unique IDs of all people in that class.
  */
-function people_in_position(players, title) {
+function people_in_position(players, title, pretty=false) {
 	var people = [];
 	for (var player in players) {
 		if (players[player].title === title) {
 			people.push(player);
 		}
 	}
+	if (pretty) swap_ids_for_names(players, people)
 	return people;
 }
 
 /**
  * Generates a string to represent the current state of the game.
- * @param {Object} state The state of the game including players and hierarchy.
+ * @param {Object} game The state of the game including players and hierarchy.
  */
-function state_tostring(state) {
+function game_tostring(game) {
 	var str = "";
-	hierarchy.keys().forEach(title => {
-		var people = people_in_position(state.players, title);
+	game.hierarchy.keys().forEach(title => {
+		var people = people_in_position(game.players, title, true);
 		str += title + Array(11 - title.length).join(" ") + people.join(", ") + "\n";
 	});
 	return str;
+}
+
+/**
+ * Swaps unique IDs out for the names of the people they represent.
+ * In-place.
+ * @param {Object} players Details about players of the game.
+ * @param {Array<String>} ids Array of unique IDs.
+ * @returns {Array<String>} Array of names.
+ */
+function swap_ids_for_names(players, ids) {
+	for (var i = 0; i < ids.length; i++) {
+		ids[i] = players[ids[i]].name;
+	}
 }
 
 /**
@@ -356,6 +378,6 @@ module.exports = {
 	create_players: create_players,
 	build_hierarchy: build_hierarchy,
 	assign_places: assign_places,
-	state_tostring: state_tostring,
+	game_tostring: game_tostring,
 	gaussian: gaussian
 }

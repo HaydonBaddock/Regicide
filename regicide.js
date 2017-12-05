@@ -11,129 +11,301 @@ var create_players = helpers.create_players;
 var create_player = helpers.create_player;
 var build_hierarchy = helpers.build_hierarchy;
 var assign_places = helpers.assign_places;
-var state_tostring = helpers.state_tostring;
+var game_tostring = helpers.game_tostring;
 var gaussian = helpers.gaussian;
 
-var state = {
-	hierarchy: null,
-	players: null,
-	game_running: false
-};
+var games = {};
 
 exports.run = (api, event) => {
-	// TODO: call appropriate method
-	output = 'result of method';
+	args = event.arguments;
+
+	var intent = args[1].toLowerCase();
+
+	var gameThreadId;
+	if (intent === "pledge" || intent === "unpledge") gameThreadId = args[2];
+	else gameThreadId = event.thread_id;
+	var game = games[gameThreadId];
+
+	var output;
+	switch (intent) {
+		case "startgame":
+			output = start_game(games, gameThreadId, api.getUsers(gameThreadId));
+			break;
+		case "endgame":
+			output = end_game(games, gameThreadId);
+			break;
+		case "joingame":
+			output = join_game(game, event.sender_id, event.sender_name);
+			break;
+		case "hierarchy":
+			output = hierarchy(game);
+			break;
+		case "supporters":
+			output = supporters(game, args[2]);
+			break;
+		case "supporting":
+			output = supporting(game, event.sender_id, event.thread_id, args[2]);
+			break;
+		case "pledge":
+			output = pledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]);
+			break;
+		case "unpledge":
+			output = unpledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]);
+			break;
+		case "attack":
+			output = attack(game, event.sender_id, args[2]);
+			break;
+		case "appoint":
+			output = appoint(game, event.sender_id, args[2], args[3]);
+			break;
+	}
 
 	api.sendMessage(output, event.thread_id);
 }
 
-function start_game() {
-	// TODO: somehow need to load all the people in the chat
-	var people = ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot", "Golf", "Hotel", "India", "Juliett", "Kilo", "Lima", "Mike", "November", "Oscar"];
+/**
+ * /regicide startgame
+ * @param {Object} games
+ * @param {String} threadId
+ * @param {Object} people
+ */
+function start_game(games, threadId, people) {
+	var num_players = Object.keys(people).length;
+	if (num_players < 6) return "minimum 6 players";
 
-	if (people.length < 6) return "minimum 6 players";
-
-	state.hierarchy = build_hierarchy(people.length);
-	state.players = create_players(people);
-	assign_places(state.players, state.hierarchy);
-	state.game_running = true;
-	return "game started\n\n" + state_tostring(state);
+	var game = {
+		hierarchy: build_hierarchy(num_players),
+		players: create_players(people)
+	}
+	assign_places(game.players, game.hierarchy);
+	games[threadId] = game;
+	return "game started\n\n" + game_tostring(game);
 }
 
-function end_game() {
-	if (!state.game_running) return "Game's not running, foo!";
+/**
+ * /regicide endgame
+ * @param {Object} games
+ * @param {String} threadId
+ */
+function end_game(games, threadId) {
+	if (!games[threadId]) return "Game's not running, foo!";
 
-	state.hierarchy = null;
-	state.players = null;
-	state.game_running = false;
+	delete games[threadId];
 	return "game ended";
 }
 
-function join_game(caller) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (is_player(caller, state.players)) return "You're already in the game, foo!";
+/**
+ * /regicide joingame
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} callerName
+ */
+function join_game(game, callerId, callerName) {
+	if (!game) return "Game's not running, foo!";
+	if (is_player(callerId, game.players)) return "You're already in the game, foo!";
 
-	var num_players = Object.keys(state.players).length + 1;
-	state.hierarchy = build_hierarchy(num_players);
-	state.players[caller] = create_player();
-	assign_places(state.players, state.hierarchy);
-	return caller + " has joined the game\n\n" + state_tostring(state);
+	var num_players = Object.keys(game.players).length + 1;
+	game.hierarchy = build_hierarchy(num_players);
+	game.players[callerId] = create_player(callerName);
+	assign_places(game.players, game.hierarchy);
+	return callerName + " has joined the game\n\n" + game_tostring(game);
 }
 
-function hierarchy() {
-	if (!state.game_running) return "Game's not running, foo!";
+/**
+ * /regicide hierarchy
+ * @param {Object} game
+ */
+function hierarchy(game) {
+	if (!game) return "Game's not running, foo!";
 
-	return state_tostring(state);
+	return game_tostring(game);
 }
 
-function supporters(target) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (!is_player(target, state.players)) return "That's not a player, foo!";
+/**
+ * /regicde supporters <Player's Unique ID>
+ * @param {Object} game
+ * @param {String} targetId
+ */
+function supporters(game, targetId) {
+	if (!game) return "Game's not running, foo!";
+	if (!is_player(targetId, game.players)) return "That's not a player, foo!";
 
-	var message = target + "'s supporters: " + get_supporters(target, state.players).join(", ");
-	return message + "\nTotal Strength: " + get_strength(target, state.players, state.hierarchy);
+	var targetName = game.players[targetId];
+	var message = targetName + "'s supporters: " + get_supporters(targetId, game.players, false, true).join(", ");
+	return message + "\nTotal Strength: " + get_strength(targetId, game.players, game.hierarchy, false);
 }
 
-function pledge(caller, target) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(caller, state.players)) return "You already went, foo!";
-	if (!is_player(target, state.players)) return "That's not a player, foo!";
-	set_most_recent_move(caller, state.players);
+/**
+ * /regicide supporting <chatId>
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} originThreadId
+ * @param {String} destinationThreadId
+ */
+function supporting(game, callerId, originThreadId, destinationThreadId) {
+	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
+	if (!game) return "No game in that thread, foo!";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
 
-	var old_pledge = state.players[caller].supporting;
-	state.players[caller].supporting = target;
-	if (old_pledge) return caller + " has abandoned " + old_pledge + " in favor of " + target;
-	return caller + " has pledged their support to " + target;
+	var message = "Purportedly supporting " + game.players[callerId].claimed_supportee;
+	message += "\nActually supporting " + game.players[callerId].actual_supportee;
+	return message;
 }
 
-function unpledge(caller) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(caller, state.players)) return "You already went, foo!";
-	if (state.players[caller].supporting === null) return "You're not supporting anyone, foo!";
-	set_most_recent_move(caller, state.players);
+/**
+ * /regicide pledge <chatId> <targetId> <sincere> <public>
+ * @param {Object} api
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} originThreadId
+ * @param {String} destinationThreadId
+ * @param {String} targetId
+ * @param {Boolean} sincere
+ * @param {Boolean} public
+ */
+function pledge(api, game, callerId, originThreadId, destinationThreadId, targetId, sincere, public) {
+	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
+	if (!game) return "No game in that thread, foo!";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
+	if (!can_move(callerId, game.players)) return "You already went, foo!";
+	if (!is_player(targetId, game.players)) return "That's not a player, foo!";
+	set_most_recent_move(callerId, game.players);
 
-	var old_pledge = state.players[caller].supporting;
-	state.players[caller].supporting = null;
-	return caller + " has disavowed " + old_pledge;
+	var targetName = game.players[targetId].name;
+	if (sincere) {
+		game.players[callerId].actual_supportee = targetId;
+	}
+	if (public) {
+		var oldPledge = game.players[callerId].claimed_supportee;
+		game.players[callerId].claimed_supportee = targetId;
+
+		var callerName = game.players[callerId].name;
+		var message;
+		if (oldPledge) message = callerName + " has abandoned " + oldPledge + " in favor of " + targetName;
+		else message = callerName + " has pledged their support to " + targetName;
+		api.sendMessage(message, destinationThreadId);
+	}
+
+	if (sincere && public)   return "You sincerely proclaim your support to " + targetName;
+	if (!sincere && public)  return "You deceitfully proclaim your support to " + targetName;
+	if (sincere && !public)  return "You secretly support " + targetName;
+	if (!sincere && !public) return "You achieve nothing";
 }
 
-function attack(caller, target) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(caller, state.players)) return "You already went, foo!";
-	if (!is_player(target, state.players)) return "That's not a player, foo!";
-	set_most_recent_move(caller, state.players);
+/**
+ * /regicide unpledge <chatId> <sincere> <public>
+ * @param {Object} api
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} originThreadId
+ * @param {String} destinationThreadId
+ * @param {Boolean} sincere
+ * @param {Boolean} public
+ */
+function unpledge(api, game, callerId, originThreadId, destinationThreadId, sincere, public) {
+	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
+	if (!game) return "No game in that thread, foo!";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
+	if (!can_move(callerId, game.players)) return "You already went, foo!";
+	set_most_recent_move(callerId, game.players);
 
-	var caller_attack_strength = get_strength(state, caller) * gaussian(1, 0.1);
-	var target_attack_strength = get_strength(state, target) * gaussian(1, 0.1);
-	var victorious = caller_attack_strength > target_attack_strength;
+	var actualPledge = game.players[callerId].actual_supportee;
+	var claimedPledge = game.players[callerId].claimed_supportee;
+	var actualPledgeName = actualPledge ? game.players[actualPledge].name : null;
+	var claimedPledgeName = claimedPledge ? game.players[claimedPledge].name : null;
+
+	if (sincere && actualPledge) {
+		game.players[callerId].actual_supportee = null;
+	}
+	if (public && claimedPledge) {
+		game.players[callerId].claimed_supportee = null;
+
+		var callerName = game.players[callerId].name;
+		var message = callerName + " has disavowed " + claimedPledgeName;
+		api.sendMessage(message, destinationThreadId);
+	}
+
+	if (!sincere && !public) { // not changing anything about the game state
+		return "You achieve nothing";
+	}
+	if (!actualPledge && !claimedPledge) { // both pledge types are null
+		return "You're already not supporting anyone, publicy or otherwise";
+	}
+	if (actualPledge === claimedPledge) { // purported and actual pledges are the same person, and it's not null
+		if (sincere && public)   return "You sincerely proclaim that you are no longer supporting " + actualPledgeName;
+		if (sincere && !public)  return "You're no longer supporting " + actualPledgeName + ", but you don't tell anyone";
+		if (!sincere && public)  return "You claim you are no longer supporting " + actualPledgeName + ", but you still are";
+	}
+	if (!actualPledge) { // no actual pledge, only a purported pledge
+		if (sincere && public)   return "You're no longer claiming to support " + claimedPledgeName;
+		if (sincere && !public)  return "You're already not supporting anyone; you still claim allegiance to " + claimedPledgeName;
+		if (!sincere && public)  return "You're no longer claiming to support " + claimedPledgeName;
+	}
+	if (!claimedPledge) { // no public pledge, only a secret pledge (yes I know the 'if' statement is redundant)
+		if (sincere && public)   return "You're no longer secretly supporting " + actualPledgeName;
+		if (sincere && !public)  return "You're no longer secretly supporting " + actualPledgeName;
+		if (!sincere && public)  return "You're already claiming to not support anyone; you still hold allegiance to " + actualPledgeName;
+	}
+}
+
+/**
+ * /regicide attack <targetId>
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} targetId
+ */
+function attack(game, callerId, targetId) {
+	if (!game) return "Game's not running, foo!";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame)";
+	if (!can_move(callerId, game.players)) return "You already went, foo!";
+	if (!is_player(targetId, game.players)) return "That's not a player, foo!";
+	set_most_recent_move(callerId, game.players);
+
+	var callerName = game.players[callerId].name;
+	var targetName = game.players[targetId].name;
+
+	var callerStrength = get_strength(callerId, game.players, game.hierarchy, true) * gaussian(1, 0.1);
+	var targetStrength = get_strength(targetId, game.players, game.hierarchy, true) * gaussian(1, 0.1);
+	var victorious = callerStrength > targetStrength;
 	if (victorious) {
-		state.players[caller].title = state.players[target].title;
-		[target].push(get_supporters(target, state.players)).forEach(loser => {
-			state.players[loser] = create_player();
+		game.players[callerId].title = game.players[targetId].title;
+		[targetId].push(get_supporters(targetId, game.players, true, false)).forEach(loserId => {
+			game.players[loserId] = create_player();
 		});
-		assign_places(state.players, state.hierarchy, get_supporters(caller, state.players));
-		return caller + " has usurped the position of " + state.players[caller].title + " from " + target + "\n\n" + state_tostring(state);
+		assign_places(game.players, game.hierarchy, get_supporters(callerId, game.players, true, false));
+		return callerName + " has usurped the position of " + game.players[callerId].title + " from " + targetName + "\n\n" + game_tostring(game);
 	}
 	else {
-		[caller].push(get_supporters(caller, state.players)).forEach(loser => {
-			state.players[loser] = create_player();
+		[callerId].push(get_supporters(callerId, game.players, true, false)).forEach(loserId => {
+			game.players[loserId] = create_player();
 		});
-		assign_places(state.players, state.hierarchy, get_supporters(target, state.players));
-		return caller + " died trying to overthrow " + target + "\nAll their fellow conspirators have been executed\n\n" + state_tostring(state);
+		assign_places(game.players, game.hierarchy, get_supporters(targetId, game.players, true, false));
+		return callerName + " died trying to overthrow " + targetName + "\nAll their fellow conspirators have been executed\n\n" + game_tostring(game);
 	}
 }
 
-function appoint(caller, promotee, demotee) {
-	if (!state.game_running) return "Game's not running, foo!";
-	if (!can_move(caller, state.players)) return "You already went, foo!";
-	if (!is_player(promotee, state.players)) return "That's not a player, foo!";
-	if (!is_player(demotee, state.players)) return "That's not a player, foo!";
-	if (get_relative_class(state.players[caller].title, state.hierarchy, 1) !== state.players[demotee].title) return "You can't demote " + demotee + ", foo!";
-	if (get_relative_class(state.players[caller].title, state.hierarchy, 2) !== state.players[promotee].title) return "You can't promote " + promotee + ", foo!";
-	set_most_recent_move(caller, state.players);
+/**
+ * /regicide appoint <promoteeId> <demoteeId>
+ * @param {Object} game
+ * @param {String} callerId
+ * @param {String} promoteeId
+ * @param {String} demoteeId
+ */
+function appoint(game, callerId, promoteeId, demoteeId) {
+	if (!game) return "Game's not running, foo!";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame)";
+	if (!can_move(callerId, game.players)) return "You already went, foo!";
+	if (!is_player(promoteeId, game.players)) return "Can't promote someone who's not playing, foo!";
+	if (!is_player(demoteeId, game.players)) return "Can't demote someone who's not playing, foo!";
+	if (get_relative_class(game.players[callerId].title, game.hierarchy, 1) !== game.players[demoteeId].title) return "You can't demote " + game.players[demoteeId].name + ", foo!";
+	if (get_relative_class(game.players[callerId].title, game.hierarchy, 2) !== game.players[promoteeId].title) return "You can't promote " + game.players[promoteeId].name + ", foo!";
+	set_most_recent_move(callerId, game.players);
 
-	state.players[promotee].title = get_relative_class(state.players[caller].title, state.hierarchy, 1);
-	state.players[demotee].title = get_relative_class(state.players[caller].title, state.hierarchy, 2);
-	var message = promotee + " has been promoted to the position of " + state.players[promotee].title + "\n";
-	return message + demotee + " demoted to " + promotee + "'s old position of " + state.players[demotee].title;
+	game.players[promoteeId].title = get_relative_class(game.players[callerId].title, game.hierarchy, 1);
+	game.players[demoteeId].title = get_relative_class(game.players[callerId].title, game.hierarchy, 2);
+
+	var promoteeName = game.players[promoteeId].name;
+	var demoteeName = game.players[demoteeId].name;
+	var message = promoteeName + " has been promoted to the position of " + game.players[promoteeId].title;
+	return message + "\n" + demoteeName + " demoted to " + promoteeName + "'s old position of " + game.players[demoteeId].title;
 }
