@@ -208,7 +208,7 @@ function assign_places(players, hierarchy, victors=[]) {
 			if (y < hierarchy.length()) {
 				var people = shuffle(people_in_position(players, hierarchy.keyAt(y)));
 				if (people.length > 0) {
-					var prioritised = matching_elemets(people, victors);
+					var prioritised = matching_elements(people, victors);
 					if (prioritised.length > 0)
 						players[prioritised[0]].title = hierarchy.keyAt(i);
 					else
@@ -276,7 +276,7 @@ function swap_ids_for_names(players, ids) {
  * @param {Array} arr2 Array two.
  * @returns {Array} Common elements of the two arrays.
  */
-function matching_elemets(arr1, arr2) {
+function matching_elements(arr1, arr2) {
 	var matches = [];
 	for (var i in arr1) {
 		if (arr2.indexOf(arr1[i]) > -1) {

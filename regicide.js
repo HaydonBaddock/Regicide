@@ -17,13 +17,10 @@ var gaussian = helpers.gaussian;
 var games = {};
 
 exports.run = (api, event) => {
-	args = event.arguments;
+	var args = event.arguments;
 
 	var intent = args[1].toLowerCase();
-
-	var gameThreadId;
-	if (intent === "pledge" || intent === "unpledge") gameThreadId = args[2];
-	else gameThreadId = event.thread_id;
+	var gameThreadId = (intent === "supporting" || intent === "pledge" || intent === "unpledge") ? args[2] : event.thread_id;
 	var game = games[gameThreadId];
 
 	var output;
@@ -59,7 +56,6 @@ exports.run = (api, event) => {
 			output = appoint(game, event.sender_id, args[2], args[3]);
 			break;
 	}
-
 	api.sendMessage(output, event.thread_id);
 }
 
@@ -145,7 +141,7 @@ function supporters(game, targetId) {
 function supporting(game, callerId, originThreadId, destinationThreadId) {
 	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
 	if (!game) return "No game in that thread, foo!";
-	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
 
 	var message = "Purportedly supporting " + game.players[callerId].claimed_supportee;
 	message += "\nActually supporting " + game.players[callerId].actual_supportee;
@@ -166,7 +162,7 @@ function supporting(game, callerId, originThreadId, destinationThreadId) {
 function pledge(api, game, callerId, originThreadId, destinationThreadId, targetId, sincere, public) {
 	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
 	if (!game) return "No game in that thread, foo!";
-	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
 	if (!can_move(callerId, game.players)) return "You already went, foo!";
 	if (!is_player(targetId, game.players)) return "That's not a player, foo!";
 	set_most_recent_move(callerId, game.players);
@@ -205,7 +201,7 @@ function pledge(api, game, callerId, originThreadId, destinationThreadId, target
 function unpledge(api, game, callerId, originThreadId, destinationThreadId, sincere, public) {
 	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
 	if (!game) return "No game in that thread, foo!";
-	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame in game-chat)";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
 	if (!can_move(callerId, game.players)) return "You already went, foo!";
 	set_most_recent_move(callerId, game.players);
 
@@ -226,10 +222,10 @@ function unpledge(api, game, callerId, originThreadId, destinationThreadId, sinc
 	}
 
 	if (!sincere && !public) { // not changing anything about the game state
-								return "You achieve nothing";
+		return "You achieve nothing";
 	}
 	if (!actualPledge && !claimedPledge) { // both pledge types are null
-								return "You're already not supporting anyone, publicy or otherwise";
+		return "You're already not supporting anyone, publicy or otherwise";
 	}
 	if (actualPledge === claimedPledge) { // purported and actual pledges are the same person, and it's not null
 		if (sincere && public)  return "You sincerely proclaim that you are no longer supporting " + actualPledgeName;
@@ -256,7 +252,7 @@ function unpledge(api, game, callerId, originThreadId, destinationThreadId, sinc
  */
 function attack(game, callerId, targetId) {
 	if (!game) return "Game's not running, foo!";
-	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame)";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
 	if (!can_move(callerId, game.players)) return "You already went, foo!";
 	if (!is_player(targetId, game.players)) return "That's not a player, foo!";
 	set_most_recent_move(callerId, game.players);
@@ -293,7 +289,7 @@ function attack(game, callerId, targetId) {
  */
 function appoint(game, callerId, promoteeId, demoteeId) {
 	if (!game) return "Game's not running, foo!";
-	if (!is_player(callerId, game.players)) return "You're not playing, foo! (use joingame)";
+	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
 	if (!can_move(callerId, game.players)) return "You already went, foo!";
 	if (!is_player(promoteeId, game.players)) return "Can't promote someone who's not playing, foo!";
 	if (!is_player(demoteeId, game.players)) return "Can't demote someone who's not playing, foo!";
