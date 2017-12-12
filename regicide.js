@@ -55,6 +55,9 @@ exports.run = (api, event) => {
 		case "appoint":
 			output = appoint(game, event.sender_id, args[2], args[3]);
 			break;
+		default:
+			output = "That's not a command, foo!";
+			break;
 	}
 	api.sendMessage(output, event.thread_id);
 }
