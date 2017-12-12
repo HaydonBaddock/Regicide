@@ -1,18 +1,4 @@
-
-// TODO: There's got to be a better way to do this...
-var helpers = require("./support_methods");
-var can_move = helpers.can_move;
-var set_most_recent_move = helpers.set_most_recent_move;
-var is_player = helpers.is_player;
-var get_strength = helpers.get_strength;
-var get_supporters = helpers.get_supporters;
-var get_relative_class = helpers.get_relative_class;
-var create_players = helpers.create_players;
-var create_player = helpers.create_player;
-var build_hierarchy = helpers.build_hierarchy;
-var assign_places = helpers.assign_places;
-var game_tostring = helpers.game_tostring;
-var gaussian = helpers.gaussian;
+const {can_move,set_most_recent_move,is_player,get_strength,get_supporters,get_relative_class,create_players,create_player,build_hierarchy,assign_places,game_tostring,gaussian} = require("./support_methods");
 
 var games = {};
 
