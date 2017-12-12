@@ -152,7 +152,7 @@ function supporting(game, callerId, originThreadId, destinationThreadId) {
 }
 
 /**
- * /regicide pledge <chatId> <targetId> <sincere> <public>
+ * /regicide pledge <chatId> <targetId> <sincere> <declare>
  * @param {Object} api
  * @param {Object} game
  * @param {String} callerId
@@ -160,9 +160,9 @@ function supporting(game, callerId, originThreadId, destinationThreadId) {
  * @param {String} destinationThreadId
  * @param {String} targetId
  * @param {Boolean} sincere
- * @param {Boolean} public
+ * @param {Boolean} declare
  */
-function pledge(api, game, callerId, originThreadId, destinationThreadId, targetId, sincere, public) {
+function pledge(api, game, callerId, originThreadId, destinationThreadId, targetId, sincere, declare) {
 	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
 	if (!game) return "No game in that thread, foo!";
 	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
@@ -174,7 +174,7 @@ function pledge(api, game, callerId, originThreadId, destinationThreadId, target
 	if (sincere) {
 		game.players[callerId].actual_supportee = targetId;
 	}
-	if (public) {
+	if (declare) {
 		var oldPledge = game.players[callerId].claimed_supportee;
 		game.players[callerId].claimed_supportee = targetId;
 
@@ -185,23 +185,23 @@ function pledge(api, game, callerId, originThreadId, destinationThreadId, target
 		api.sendMessage(message, destinationThreadId);
 	}
 
-	if (sincere && public)   return "You sincerely proclaim your support to " + targetName;
-	if (!sincere && public)  return "You deceitfully proclaim your support to " + targetName;
-	if (sincere && !public)  return "You secretly support " + targetName;
-	if (!sincere && !public) return "You achieve nothing";
+	if (sincere && declare)   return "You sincerely proclaim your support to " + targetName;
+	if (!sincere && declare)  return "You deceitfully proclaim your support to " + targetName;
+	if (sincere && !declare)  return "You secretly support " + targetName;
+	if (!sincere && !declare) return "You achieve nothing";
 }
 
 /**
- * /regicide unpledge <chatId> <sincere> <public>
+ * /regicide unpledge <chatId> <sincere> <declare>
  * @param {Object} api
  * @param {Object} game
  * @param {String} callerId
  * @param {String} originThreadId
  * @param {String} destinationThreadId
  * @param {Boolean} sincere
- * @param {Boolean} public
+ * @param {Boolean} declare
  */
-function unpledge(api, game, callerId, originThreadId, destinationThreadId, sincere, public) {
+function unpledge(api, game, callerId, originThreadId, destinationThreadId, sincere, declare) {
 	if (originThreadId === destinationThreadId) return "Message me in private, foo!";
 	if (!game) return "No game in that thread, foo!";
 	if (!is_player(callerId, game.players)) return "You're not playing, foo!";
@@ -216,7 +216,7 @@ function unpledge(api, game, callerId, originThreadId, destinationThreadId, sinc
 	if (sincere && actualPledge) {
 		game.players[callerId].actual_supportee = null;
 	}
-	if (public && claimedPledge) {
+	if (declare && claimedPledge) {
 		game.players[callerId].claimed_supportee = null;
 
 		var callerName = game.players[callerId].name;
@@ -224,26 +224,26 @@ function unpledge(api, game, callerId, originThreadId, destinationThreadId, sinc
 		api.sendMessage(message, destinationThreadId);
 	}
 
-	if (!sincere && !public) { // not changing anything about the game state
+	if (!sincere && !declare) { // not changing anything about the game state
 		return "You achieve nothing";
 	}
 	if (!actualPledge && !claimedPledge) { // both pledge types are null
 		return "You're already not supporting anyone, publicy or otherwise";
 	}
 	if (actualPledge === claimedPledge) { // purported and actual pledges are the same person, and it's not null
-		if (sincere && public)  return "You sincerely proclaim that you are no longer supporting " + actualPledgeName;
-		if (sincere && !public) return "You're no longer supporting " + actualPledgeName + ", but you don't tell anyone";
-		if (!sincere && public) return "You claim you are no longer supporting " + actualPledgeName + ", but you still are";
+		if (sincere && declare)  return "You sincerely proclaim that you are no longer supporting " + actualPledgeName;
+		if (sincere && !declare) return "You're no longer supporting " + actualPledgeName + ", but you don't tell anyone";
+		if (!sincere && declare) return "You claim you are no longer supporting " + actualPledgeName + ", but you still are";
 	}
 	if (!actualPledge) { // no actual pledge, only a purported pledge
-		if (sincere && public)  return "You're no longer claiming to support " + claimedPledgeName;
-		if (sincere && !public) return "You're already not supporting anyone; you still claim allegiance to " + claimedPledgeName;
-		if (!sincere && public) return "You're no longer claiming to support " + claimedPledgeName;
+		if (sincere && declare)  return "You're no longer claiming to support " + claimedPledgeName;
+		if (sincere && !declare) return "You're already not supporting anyone; you still claim allegiance to " + claimedPledgeName;
+		if (!sincere && declare) return "You're no longer claiming to support " + claimedPledgeName;
 	}
 	if (!claimedPledge) { // no public pledge, only a secret pledge (yes I know the 'if' statement is redundant)
-		if (sincere && public)  return "You're no longer secretly supporting " + actualPledgeName;
-		if (sincere && !public) return "You're no longer secretly supporting " + actualPledgeName;
-		if (!sincere && public) return "You're already claiming to not support anyone; you still hold allegiance to " + actualPledgeName;
+		if (sincere && declare)  return "You're no longer secretly supporting " + actualPledgeName;
+		if (sincere && !declare) return "You're no longer secretly supporting " + actualPledgeName;
+		if (!sincere && declare) return "You're already claiming to not support anyone; you still hold allegiance to " + actualPledgeName;
 	}
 }
 
