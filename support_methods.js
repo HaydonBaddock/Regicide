@@ -250,7 +250,7 @@ function people_in_position(players, title, pretty=false) {
  */
 function game_tostring(game) {
 	var str = "";
-	game.hierarchy.keys().forEach(title => {
+	game.hierarchy.keys_().forEach(title => {
 		var people = people_in_position(game.players, title, true);
 		str += title + Array(11 - title.length).join(" ") + people.join(", ") + "\n";
 	});
