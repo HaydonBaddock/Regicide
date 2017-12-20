@@ -1,49 +1,40 @@
-const {can_move,set_most_recent_move,is_player,get_strength,get_supporters,get_relative_class,create_players,create_player,build_hierarchy,assign_places,game_tostring,gaussian} = require("./support_methods");
+const {
+	can_move,
+	set_most_recent_move,
+	is_player,
+	get_strength,
+	get_supporters,
+	get_relative_class,
+	create_players,
+	create_player,
+	build_hierarchy,
+	assign_places,
+	game_tostring,
+	gaussian
+} = require("./supportMethods");
 
 var games = {};
 
 exports.run = (api, event) => {
 	var args = event.arguments;
 
-	var intent = args[1].toLowerCase();
+	var intent = args[1] ? args[1].toLowerCase() : null;
 	var gameThreadId = (intent === "supporting" || intent === "pledge" || intent === "unpledge") ? args[2] : event.thread_id;
 	var game = games[gameThreadId];
 
 	var output;
 	switch (intent) {
-		case "startgame":
-			output = start_game(games, gameThreadId, api.getUsers(gameThreadId));
-			break;
-		case "endgame":
-			output = end_game(games, gameThreadId);
-			break;
-		case "joingame":
-			output = join_game(game, event.sender_id, event.sender_name);
-			break;
-		case "hierarchy":
-			output = hierarchy(game);
-			break;
-		case "supporters":
-			output = supporters(game, args[2]);
-			break;
-		case "supporting":
-			output = supporting(game, event.sender_id, event.thread_id, args[2]);
-			break;
-		case "pledge":
-			output = pledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]);
-			break;
-		case "unpledge":
-			output = unpledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]);
-			break;
-		case "attack":
-			output = attack(game, event.sender_id, args[2]);
-			break;
-		case "appoint":
-			output = appoint(game, event.sender_id, args[2], args[3]);
-			break;
-		default:
-			output = "That's not a command, foo!";
-			break;
+		case "startgame":  output = start_game(games, gameThreadId, api.getUsers(gameThreadId)); break;
+		case "endgame":	   output = end_game(games, gameThreadId); break;
+		case "joingame":   output = join_game(game, event.sender_id, event.sender_name); break;
+		case "hierarchy":  output = hierarchy(game); break;
+		case "supporters": output = supporters(game, args[2]); break;
+		case "supporting": output = supporting(game, event.sender_id, event.thread_id, args[2]); break;
+		case "pledge":     output = pledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]); break;
+		case "unpledge":   output = unpledge(api, game, event.sender_id, event.thread_id, args[2], args[3], args[4]); break;
+		case "attack":     output = attack(game, event.sender_id, args[2]); break;
+		case "appoint":    output = appoint(game, event.sender_id, args[2], args[3]); break;
+		default:           output = "That's not a command, foo!"; break;
 	}
 	api.sendMessage(output, event.thread_id);
 }

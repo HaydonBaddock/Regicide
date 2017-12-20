@@ -1,6 +1,6 @@
 {
     "name": "Regicide",
     "version": 0.0,
-    "startup": "regicde.js",
+    "startup": "regicide.js",
     "command": "regicide"
 }

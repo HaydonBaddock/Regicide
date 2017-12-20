@@ -54,7 +54,7 @@ function set_most_recent_move(personId, players) {
  * @returns {Boolean} true if person is a player, otherwise false.
  */
 function is_player(personId, players) {
-	return person in players;
+	return personId in players;
 }
 
 /**
@@ -312,11 +312,11 @@ function shuffle(array) {
  */
 function gaussian(mean, stdev) {
 	var y2;
-	var use_last = false;
+	var useLast = false;
 	var y1;
-	if (use_last) {
+	if (useLast) {
 		y1 = y2;
-		use_last = false;
+		useLast = false;
 	}
 	else {
 		var x1, x2, w;
@@ -328,7 +328,7 @@ function gaussian(mean, stdev) {
 		w = Math.sqrt((-2.0 * Math.log(w))/w);
 		y1 = x1 * w;
 		y2 = x2 * w;
-		use_last = true;
+		useLast = true;
 	}
 
 	var retval = mean + stdev * y1;
