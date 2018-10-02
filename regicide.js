@@ -46,7 +46,7 @@ exports.run = (api, event) => {
  * @param {Object} people
  */
 function start_game(games, threadId, people) {
-	var numPlayers = Object.keys(people).length;
+	var numPlayers = Object.keys(people || {}).length;
 	if (numPlayers < 6) return "minimum 6 players";
 
 	var game = {
